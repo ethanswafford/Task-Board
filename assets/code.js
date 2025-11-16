@@ -26,6 +26,11 @@ function saveState() {
 // - Increment nextId and persist using saveState()
 function generateTaskId() {
     // Your code here
+
+    let id = nextId;
+    nextId += 1;
+    saveState();
+    return id;
 }
 
 // TODO: createTaskCard(task)
@@ -42,8 +47,25 @@ function generateTaskId() {
 //     - Add an overdue style if past due
 function createTaskCard(task) {
     // Your code here
-}
+    const day = daysjs().startOf('day');
+    const due = daysjs(task.dueDate, 'YYYY-MM-DD').startOf('day');
 
+    let borderClass = 'border border-light';
+
+    if (task.status !== 'done' && due.isValid()) {
+        if (due.isBefore(today, 'day')) {
+            // Overdue
+            borderClass = 'border border-danger';
+        } else {
+            const diffDays = due.diff(today, 'day');
+            if (diffDays <= 2) {
+                // Due today / soon
+                borderClass = 'border border-warning';
+            }
+        }
+
+    }
+}
 // TODO: renderTaskList()
 // - Clear all lane containers (#todo-cards, #in-progress-cards, #done-cards)
 // - Loop through tasks array
