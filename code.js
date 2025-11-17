@@ -48,7 +48,7 @@ function generateTaskId() {
 function createTaskCard(task) {
     // Your code here
     const today = dayjs().startOf('day');
-    const due = dayjs(task.dueDate, 'YYYY-MM-DD').startOf('day');
+    const due = dayjs(task.dueDate, 'MM-DD-YYYY').startOf('day');
 
     // Default card style; we'll add warning/overdue based on date
     let borderClass = 'border border-light';
@@ -67,7 +67,7 @@ function createTaskCard(task) {
     }
 
     const formattedDate = due.isValid() ?
-        due.format('MMM D, YYYY') :
+        due.format('MM-DD-YYYY') :
         task.dueDate;
 
     const $card = $(`
