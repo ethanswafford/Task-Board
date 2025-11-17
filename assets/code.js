@@ -65,7 +65,8 @@ function createTaskCard(task) {
         }
 
     }
-}
+};
+
 // TODO: renderTaskList()
 // - Clear all lane containers (#todo-cards, #in-progress-cards, #done-cards)
 // - Loop through tasks array
