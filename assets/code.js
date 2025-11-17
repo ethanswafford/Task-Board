@@ -27,7 +27,7 @@ function saveState() {
 function generateTaskId() {
     // Your code here
 
-    let id = nextId;
+    const id = nextId;
     nextId += 1;
     saveState();
     return id;
@@ -47,9 +47,10 @@ function generateTaskId() {
 //     - Add an overdue style if past due
 function createTaskCard(task) {
     // Your code here
-    const day = daysjs().startOf('day');
-    const due = daysjs(task.dueDate, 'YYYY-MM-DD').startOf('day');
+    const today = dayjs().startOf('day');
+    const due = dayjs(task.dueDate, 'YYYY-MM-DD').startOf('day');
 
+    // Default card style; we'll add warning/overdue based on date
     let borderClass = 'border border-light';
 
     if (task.status !== 'done' && due.isValid()) {
@@ -63,9 +64,41 @@ function createTaskCard(task) {
                 borderClass = 'border border-warning';
             }
         }
-
     }
-};
+
+    const formattedDate = due.isValid() ?
+        due.format('MMM D, YYYY') :
+        task.dueDate;
+
+    const $card = $(`
+    <div class="card task-card mb-2 ${borderClass}" data-task-id="${task.id}">
+      <div class="card-body py-2 px-3">
+        <div class="d-flex justify-content-between align-items-start">
+          <div class="me-2">
+            <h3 class="h6 mb-1">${task.title}</h3>
+            <p class="small mb-1">${task.description || ''}</p>
+            <p class="small mb-0 text-muted">
+              <strong>Due:</strong> ${formattedDate}
+            </p>
+          </div>
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-danger btn-delete"
+            data-task-id="${task.id}"
+            title="Delete task"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+    </div>
+  `);
+
+    return $card;
+}
+
+
+
 
 // TODO: renderTaskList()
 // - Clear all lane containers (#todo-cards, #in-progress-cards, #done-cards)
@@ -74,7 +107,36 @@ function createTaskCard(task) {
 // - After rendering, make task cards draggable with jQuery UI
 function renderTaskList() {
     // Your code here
-}
+    $('#todo-cards').empty();
+    $('#in-progress-cards').empty();
+    $('#done-cards').empty();
+
+    tasks.forEach(task => {
+        const $card = createTaskCard(task);
+
+        if (task.status === 'to-do') {
+            $('#todo-cards').append($card);
+        } else if (task.status === 'in-progress') {
+            $('#in-progress-cards').append($card);
+        } else if (task.status === 'done') {
+            $('#done-cards').append($card);
+        }
+    });
+
+    $('.task-card').draggable({
+        revert: 'invalid',
+        zIndex: 100,
+        cursor: 'move',
+        start: function () {
+            $(this).addClass('opacity-50');
+        },
+        stop: function () {
+            $(this).removeClass('opacity-50');
+        }
+    });
+
+
+};
 
 // TODO: handleAddTask(event)
 // - Prevent default form submission
@@ -88,7 +150,41 @@ function renderTaskList() {
 // - Reset the form and close the modal
 function handleAddTask(event) {
     // Your code here
-}
+    event.preventDefault();
+
+    const title = $('#taskTitle').val().trim();
+    const description = $('#taskDescription').val().trim();
+    const dueDate = $('#taskDueDate').val().trim();
+
+    if (!title || !description || !dueDate) {
+        alert('Please fill out title, description, and due date.');
+        return;
+    }
+
+    const newTask = {
+        id: generateTaskId(),
+        title,
+        description,
+        dueDate, // in 'yyyy-mm-dd' from datepicker
+        status: 'to-do'
+    };
+
+    tasks.push(newTask);
+    saveState();
+    renderTaskList();
+
+    // Reset form
+    $('#taskForm')[0].reset();
+
+    // Close modal
+    const modalEl = document.getElementById('taskModal');
+    const modal = bootstrap.Modal.getInstance(modalEl);
+    if (modal) modal.hide();
+
+};
+
+
+
 
 // TODO: handleDeleteTask(event)
 // - Get the task id from the clicked button (data-task-id)
@@ -96,6 +192,10 @@ function handleAddTask(event) {
 // - Save and re-render
 function handleDeleteTask(event) {
     // Your code here
+    const taskId = Number($(event.currentTarget).data('taskId'));
+    tasks = tasks.filter(task => task.id !== taskId);
+    saveState();
+    renderTaskList();
 }
 
 // TODO: handleDrop(event, ui)
@@ -105,7 +205,26 @@ function handleDeleteTask(event) {
 // - Save and re-render
 function handleDrop(event, ui) {
     // Your code here
+    const $dragged = ui.draggable;
+    const taskId = Number($dragged.data('taskId'))
+
+    // Lane has data-status="to-do" / "in-progress" / "done"
+    const newStatus = $(event.target)
+        .closest('.lane')
+        .data('status');
+
+    tasks = tasks.map(task =>
+        task.id === taskId ? {
+            ...task,
+            status: newStatus
+        } : task
+    );
+
+    saveState();
+    renderTaskList();
+
 }
+
 
 // ===== Document Ready =====
 
@@ -119,7 +238,7 @@ $(function () {
         dateFormat: 'yy-mm-dd',
         changeMonth: true,
         changeYear: true,
-        minDate: 0,
+        minDate: 0
     });
 
     // Render tasks on load (will do nothing until you implement renderTaskList)
@@ -128,14 +247,20 @@ $(function () {
     // Form submit handler
     $('#taskForm').on('submit', handleAddTask);
 
+    // Delete handler (event delegation)
+    $(document).on('click', '.btn-delete', handleDeleteTask);
+
     // Make lanes droppable
     // TODO: configure droppable to accept task cards and use handleDrop
     $('.lane-body').droppable({
-        // accept: '.task-card',
-        // drop: handleDrop,
+        accept: '.task-card',
+        drop: handleDrop,
+        hoverClass: 'bg-light'
     });
 });
 
-// NOTE:
-// - You are encouraged to use Day.js for ALL date logic.
+
+
+
+// NOTE:  //- You are encouraged to use Day.js for ALL date logic.
 // - You may adjust “due soon” rules, as long as they’re clearly implemented.
